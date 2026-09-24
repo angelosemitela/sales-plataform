@@ -1,0 +1,43 @@
+# Ambiente local completo: PostgreSQL + sales-service + sales-web.
+#   docker compose up -d postgres        -> só o banco (para rodar back/front pela IDE)
+#   docker compose up -d --build         -> tudo em containers (front em http://localhost:8088)
+# O billing-registration-service (MySQL, porta 8080) continua no repositório dele.
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: sales_db
+      POSTGRES_USER: sales_app
+      POSTGRES_PASSWORD: sales_app
+    ports:
+      - "5432:5432"
+    volumes:
+      - sales-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sales_app -d sales_db"]
+      interval: 5s
+      retries: 10
+
+  sales-service:
+    build: ./sales-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SALES_DB_URL: jdbc:postgresql://postgres:5432/sales_db
+      SALES_DB_USER: sales_app
+      SALES_DB_PASSWORD: sales_app
+      SALES_JWT_SECRET: troque-este-segredo-local-com-32-bytes-ou-mais
+      SALES_CORS_ORIGINS: http://localhost:8088
+    ports:
+      - "8081:8081"
+
+  sales-web:
+    build: ./sales-web
+    depends_on:
+      - sales-service
+    ports:
+      - "8088:80"
+
+volumes:
+  sales-pgdata:

@@ -1,0 +1,48 @@
+# Todas as configurações sensíveis aceitam variável de ambiente (12-factor app);
+# os valores após ":" são padrões para desenvolvimento local.
+spring:
+  application:
+    name: sales-service
+  datasource:
+    url: ${SALES_DB_URL:jdbc:postgresql://localhost:5432/sales_db}
+    username: ${SALES_DB_USER:sales_app}
+    password: ${SALES_DB_PASSWORD:sales_app}
+  jpa:
+    # Desliga o "Open Session in View": nenhuma query escondida acontece na camada
+    # web; todo acesso ao banco fica dentro de métodos @Transactional dos services.
+    open-in-view: false
+    hibernate:
+      # O schema é 100% do Flyway; o Hibernate só confere se as entidades batem.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        # Carrega coleções LAZY em lotes (ex: planos de 50 produtos numa query só),
+        # evitando o problema N+1 sem precisar de JOIN FETCH em todo lugar.
+        default_batch_fetch_size: 50
+  flyway:
+    enabled: true
+
+server:
+  # 8080 fica para o billing-registration-service, rodando ao lado.
+  port: ${SALES_PORT:8081}
+
+sales:
+  jwt:
+    secret: ${SALES_JWT_SECRET:dev-only-secret-change-me-at-least-32-bytes!}
+    expiration: PT2H
+    issuer: sales-service
+  cors:
+    allowed-origins: ${SALES_CORS_ORIGINS:http://localhost:5173}
+  zip-code:
+    base-url: ${SALES_ZIP_CODE_URL:https://viacep.com.br/ws}
+    timeout: PT3S
+  cart:
+    abandon-check-interval: PT1M
+  outbox:
+    relay-interval: PT10S
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
